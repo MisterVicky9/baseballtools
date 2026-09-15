@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>FIP- Calculator</title>
+<style>
+  *{box-sizing:border-box;}
+  html, body{ max-width:100%; overflow-x:hidden; }
+  body{ font-family:'Segoe UI', Arial, sans-serif; background:#e8e8e8; margin:0; padding:24px; color:#222; }
+  @media (max-width:600px){ body{ padding:12px; } }
+  .page-nav{ margin:0 0 16px 0; }
+  .page-nav a{ display:inline-block; font-size:13px; font-weight:600; color:#0b5cab; text-decoration:none; background:#eaf2fb; padding:8px 14px; border-radius:8px; }
+  .page-nav a:hover{ background:#dbe9fa; }
+  h2.pagetitle{ margin:0 0 4px 0; font-size:22px; }
+  p.subtitle{ margin:0 0 20px 0; color:#666; font-size:14px; max-width:640px; }
+  .calc-card{ background:#fff; border-radius:12px; padding:22px; max-width:600px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  .calc-card h3{ margin:0 0 4px 0; font-size:18px; }
+  .formula{ font-family:'Cambria','Georgia',serif; font-style:italic; background:#f5f5f5; padding:10px 14px; border-radius:8px; font-size:14px; margin:10px 0 18px 0; color:#444; line-height:1.5; }
+  .field-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px 14px; }
+  .field-grid div{ display:flex; flex-direction:column; }
+  .field-grid label{ font-size:12px; font-weight:600; color:#444; margin-bottom:3px; }
+  .field-grid input{ padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; width:100%; }
+  .section-label{ font-size:13px; font-weight:700; display:block; margin:16px 0 8px; }
+  .calc-card button{ margin-top:16px; background:#222; color:#fff; border:none; border-radius:6px; padding:11px 20px; font-size:14px; font-weight:600; cursor:pointer; }
+  .calc-card button:hover{ background:#000; }
+  .result-box{ margin-top:18px; padding:14px 16px; border-radius:8px; background:#f0f7f0; border:1px solid #cfe8cf; display:none; }
+  .result-box.show{ display:block; }
+  .result-box .headline{ font-size:26px; font-weight:800; color:#1a5c1a; }
+  .result-box .breakdown{ font-size:13px; color:#555; margin-top:8px; line-height:1.7; }
+  .caveat{ margin-top:14px; font-size:12.5px; color:#8a6d00; background:#fff8e1; border:1px solid #f0e0a0; border-radius:8px; padding:10px 12px; line-height:1.5; }
+  .hint{ font-size:12px; color:#888; margin-top:4px; line-height:1.4; }
+</style>
+</head>
+<body>
+
+<div class="page-nav"><a href="index.html">← Home</a></div>
+<h2 class="pagetitle">FIP- Calculator</h2>
+
+<div class="calc-card">
+  <h3>FIP-</h3>
+  <div class="formula">
+    FIP- = 100 × (FIP + (FIP − FIP×(ParkFactor/100))) / League FIP
+  </div>
+
+  <div class="field-grid">
+    <div><label>FIP</label><input type="number" id="FIP" step="0.01"></div>
+    <div><label>League FIP</label><input type="number" id="lgFIP" step="0.01"></div>
+    <div><label>Park Factor</label><input type="number" id="PF" placeholder="100 = neutral"></div>
+  </div>
+  <div class="hint">Get FIP from the <a href="fip.html">FIP Calculator</a> if you don't have one yet. League FIP isn't part of the standard Guts table — look it up on FanGraphs' league leaderboards for that season.</div>
+
+  <button onclick="calc()">Calculate FIP-</button>
+
+  <div class="result-box" id="result">
+    <div class="headline" id="headline"></div>
+    <div class="breakdown" id="breakdown"></div>
+  </div>
+</div>
+
+<script>
+function val(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+function calc(){
+  const fip = val('FIP'), lgFIP = val('lgFIP');
+  const PFraw = document.getElementById('PF').value;
+  const PF = PFraw ? parseFloat(PFraw) : 100;
+
+  if(fip <= 0){ alert('Enter a FIP value.'); return; }
+  if(lgFIP <= 0){ alert('Enter a League FIP value.'); return; }
+
+  const parkAdjusted = fip * (PF/100);
+  const inner = fip - parkAdjusted;
+  const fipMinus = 100 * (fip + inner) / lgFIP;
+
+  document.getElementById('headline').textContent = 'FIP-: ' + fipMinus.toFixed(1);
+  document.getElementById('breakdown').innerHTML =
+    `FIP- = 100 × (FIP + (FIP − FIP×(PF/100))) / League FIP<br>` +
+    `= 100 × (${fip.toFixed(2)} + (${fip.toFixed(2)} − ${fip.toFixed(2)}×${(PF/100).toFixed(2)})) / ${lgFIP}<br>` +
+    `= 100 × (${fip.toFixed(2)} + ${inner.toFixed(3)}) / ${lgFIP} = ${fipMinus.toFixed(1)}<br>` +
+    `(100 = league average; lower is better for FIP-)`;
+  document.getElementById('result').classList.add('show');
+}
+</script>
+
+</body>
+</html>

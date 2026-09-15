@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>FIP Calculator</title>
+<style>
+  *{box-sizing:border-box;}
+  html, body{ max-width:100%; overflow-x:hidden; }
+  body{ font-family:'Segoe UI', Arial, sans-serif; background:#e8e8e8; margin:0; padding:24px; color:#222; }
+  @media (max-width:600px){ body{ padding:12px; } }
+  .page-nav{ margin:0 0 16px 0; }
+  .page-nav a{ display:inline-block; font-size:13px; font-weight:600; color:#0b5cab; text-decoration:none; background:#eaf2fb; padding:8px 14px; border-radius:8px; }
+  .page-nav a:hover{ background:#dbe9fa; }
+  h2.pagetitle{ margin:0 0 4px 0; font-size:22px; }
+  p.subtitle{ margin:0 0 20px 0; color:#666; font-size:14px; max-width:640px; }
+  .calc-card{ background:#fff; border-radius:12px; padding:22px; max-width:600px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  .calc-card h3{ margin:0 0 4px 0; font-size:18px; }
+  .formula{ font-family:'Cambria','Georgia',serif; font-style:italic; background:#f5f5f5; padding:10px 14px; border-radius:8px; font-size:14px; margin:10px 0 18px 0; color:#444; line-height:1.5; }
+  .field-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px 14px; }
+  .field-grid div{ display:flex; flex-direction:column; }
+  .field-grid label{ font-size:12px; font-weight:600; color:#444; margin-bottom:3px; }
+  .field-grid input{ padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; width:100%; }
+  .section-label{ font-size:13px; font-weight:700; display:block; margin:16px 0 8px; }
+  .calc-card button{ margin-top:16px; background:#222; color:#fff; border:none; border-radius:6px; padding:11px 20px; font-size:14px; font-weight:600; cursor:pointer; }
+  .calc-card button:hover{ background:#000; }
+  .toggle-btn{ background:none; border:none; color:#0b5cab; font-size:13px; font-weight:600; cursor:pointer; padding:0; text-decoration:underline; }
+  .result-box{ margin-top:18px; padding:14px 16px; border-radius:8px; background:#f0f7f0; border:1px solid #cfe8cf; display:none; }
+  .result-box.show{ display:block; }
+  .result-box .headline{ font-size:26px; font-weight:800; color:#1a5c1a; }
+  .result-box .breakdown{ font-size:13px; color:#555; margin-top:8px; line-height:1.7; }
+  .caveat{ margin-top:14px; font-size:12.5px; color:#8a6d00; background:#fff8e1; border:1px solid #f0e0a0; border-radius:8px; padding:10px 12px; line-height:1.5; }
+  .hint{ font-size:12px; color:#888; margin-top:4px; line-height:1.4; }
+</style>
+</head>
+<body>
+
+<div class="page-nav"><a href="index.html">← Home</a></div>
+<h2 class="pagetitle">FIP Calculator</h2>
+
+<div class="calc-card">
+  <h3>FIP</h3>
+  <div class="formula">
+    FIP = ((13×HR) + (3×(BB+HBP)) − (2×SO)) / IP + FIP constant
+  </div>
+
+  <label class="section-label">Box score stats</label>
+  <div class="field-grid">
+    <div><label>IP</label><input type="number" id="IP" step="0.1"></div>
+    <div><label>HR</label><input type="number" id="HR"></div>
+    <div><label>BB</label><input type="number" id="BB"></div>
+    <div><label>HBP</label><input type="number" id="HBP"></div>
+    <div><label>SO</label><input type="number" id="SO"></div>
+    <div><label>FIP constant</label><input type="number" id="C" step="0.001"></div>
+  </div>
+  <div class="hint">Enter the FIP constant yourself (generally around 3.10, varies by year/league) — look it up, or derive it below.</div>
+
+  <div style="margin-top:14px; padding-top:14px; border-top:1px solid #eee;">
+    <button type="button" class="toggle-btn" onclick="toggleDerive()">Derive the FIP constant from league totals ▾</button>
+    <div id="deriveBox" style="display:none; margin-top:12px;">
+      <div class="formula">FIP Constant = lgERA − (((13×lgHR) + (3×(lgBB+lgHBP)) − (2×lgK)) / lgIP)</div>
+      <div class="field-grid">
+        <div><label>League ERA</label><input type="number" id="lgERA" step="0.01"></div>
+        <div><label>League IP</label><input type="number" id="lgIP" step="0.1"></div>
+        <div><label>League HR</label><input type="number" id="lgHR"></div>
+        <div><label>League BB</label><input type="number" id="lgBB"></div>
+        <div><label>League HBP</label><input type="number" id="lgHBP"></div>
+        <div><label>League K</label><input type="number" id="lgK"></div>
+      </div>
+      <div class="hint">League-wide season totals (AL, NL, or all of MLB — whichever you're matching).</div>
+      <button type="button" onclick="deriveConstant()">Derive Constant</button>
+      <div class="result-box" id="deriveResult">
+        <div class="headline" id="deriveHeadline"></div>
+        <div class="breakdown" id="deriveBreakdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <button onclick="calc()" style="margin-top:18px;">Calculate FIP</button>
+
+  <div class="result-box" id="result">
+    <div class="headline" id="headline"></div>
+    <div class="breakdown" id="breakdown"></div>
+  </div>
+</div>
+
+<script>
+function val(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+function toggleDerive(){
+  const box = document.getElementById('deriveBox');
+  const btn = document.querySelector('.toggle-btn');
+  const showing = box.style.display !== 'none';
+  box.style.display = showing ? 'none' : 'block';
+  btn.textContent = showing
+    ? 'Derive the FIP constant from league totals ▾'
+    : 'Derive the FIP constant from league totals ▴';
+}
+
+function deriveConstant(){
+  const lgERA = val('lgERA'), lgIP = val('lgIP'), lgHR = val('lgHR'),
+        lgBB = val('lgBB'), lgHBP = val('lgHBP'), lgK = val('lgK');
+  if(lgIP <= 0 || lgERA <= 0){ alert('Enter League ERA and League IP at minimum.'); return; }
+
+  const raw = ((13*lgHR) + (3*(lgBB+lgHBP)) - (2*lgK)) / lgIP;
+  const constant = lgERA - raw;
+
+  document.getElementById('deriveHeadline').textContent = 'FIP constant: ' + constant.toFixed(3);
+  document.getElementById('deriveBreakdown').innerHTML =
+    `((13×${lgHR}) + (3×(${lgBB}+${lgHBP})) − (2×${lgK})) / ${lgIP} = ${raw.toFixed(3)}<br>` +
+    `FIP Constant = ${lgERA} − ${raw.toFixed(3)} = ${constant.toFixed(3)}`;
+  document.getElementById('deriveResult').classList.add('show');
+
+  document.getElementById('C').value = constant.toFixed(3);
+}
+
+function calc(){
+  const IP = val('IP'), HR = val('HR'), BB = val('BB'), HBP = val('HBP'), SO = val('SO'), C = val('C');
+  if(IP <= 0){ alert('Enter innings pitched (IP).'); return; }
+  if(C === 0){ alert('Enter a FIP constant (or derive one above).'); return; }
+
+  const fip = ((13*HR) + (3*(BB+HBP)) - (2*SO)) / IP + C;
+
+  document.getElementById('headline').textContent = 'FIP: ' + fip.toFixed(2);
+  document.getElementById('breakdown').innerHTML =
+    `FIP = ((13×${HR}) + (3×(${BB}+${HBP})) − (2×${SO})) / ${IP} + ${C}<br>` +
+    `= (${(13*HR).toFixed(1)} + ${(3*(BB+HBP)).toFixed(1)} − ${(2*SO).toFixed(1)}) / ${IP} + ${C}<br>` +
+    `= ${(((13*HR)+(3*(BB+HBP))-(2*SO))/IP).toFixed(3)} + ${C} = ${fip.toFixed(2)}`;
+  document.getElementById('result').classList.add('show');
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>wOBA Calculator</title>
+<style>
+  *{box-sizing:border-box;}
+  html, body{ max-width:100%; overflow-x:hidden; }
+  body{ font-family:'Segoe UI', Arial, sans-serif; background:#e8e8e8; margin:0; padding:24px; color:#222; }
+  @media (max-width:600px){ body{ padding:12px; } }
+  .page-nav{ margin:0 0 16px 0; }
+  .page-nav a{ display:inline-block; font-size:13px; font-weight:600; color:#0b5cab; text-decoration:none; background:#eaf2fb; padding:8px 14px; border-radius:8px; }
+  .page-nav a:hover{ background:#dbe9fa; }
+  h2.pagetitle{ margin:0 0 4px 0; font-size:22px; }
+  p.subtitle{ margin:0 0 20px 0; color:#666; font-size:14px; max-width:640px; }
+  .calc-card{ background:#fff; border-radius:12px; padding:22px; max-width:600px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  .calc-card h3{ margin:0 0 4px 0; font-size:18px; }
+  .formula{ font-family:'Cambria','Georgia',serif; font-style:italic; background:#f5f5f5; padding:10px 14px; border-radius:8px; font-size:14px; margin:10px 0 18px 0; color:#444; line-height:1.5; }
+  .field-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px 14px; }
+  .field-grid div{ display:flex; flex-direction:column; }
+  .field-grid label{ font-size:12px; font-weight:600; color:#444; margin-bottom:3px; }
+  .field-grid input{ padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; width:100%; }
+  .section-label{ font-size:13px; font-weight:700; display:block; margin:16px 0 8px; }
+  .calc-card button{ margin-top:16px; background:#222; color:#fff; border:none; border-radius:6px; padding:11px 20px; font-size:14px; font-weight:600; cursor:pointer; }
+  .calc-card button:hover{ background:#000; }
+  .result-box{ margin-top:18px; padding:14px 16px; border-radius:8px; background:#f0f7f0; border:1px solid #cfe8cf; display:none; }
+  .result-box.show{ display:block; }
+  .result-box .headline{ font-size:26px; font-weight:800; color:#1a5c1a; }
+  .result-box .breakdown{ font-size:13px; color:#555; margin-top:8px; line-height:1.7; }
+  .caveat{ margin-top:14px; font-size:12.5px; color:#8a6d00; background:#fff8e1; border:1px solid #f0e0a0; border-radius:8px; padding:10px 12px; line-height:1.5; }
+  .hint{ font-size:12px; color:#888; margin-top:4px; line-height:1.4; }
+</style>
+</head>
+<body>
+
+<div class="page-nav"><a href="index.html">← Home</a></div>
+<h2 class="pagetitle">wOBA Calculator</h2>
+
+<div class="calc-card">
+  <h3>wOBA</h3>
+  <div class="formula">
+    wOBA = (wBB×uBB + wHBP×HBP + w1B×1B + w2B×2B + w3B×3B + wHR×HR) / (AB + uBB + SF + HBP)
+  </div>
+
+  <label class="section-label">Box score stats</label>
+  <div class="field-grid">
+    <div><label>AB</label><input type="number" id="AB"></div>
+    <div><label>H</label><input type="number" id="H"></div>
+    <div><label>2B</label><input type="number" id="D2"></div>
+    <div><label>3B</label><input type="number" id="D3"></div>
+    <div><label>HR</label><input type="number" id="HR"></div>
+    <div><label>BB</label><input type="number" id="BB"></div>
+    <div><label>IBB</label><input type="number" id="IBB"></div>
+    <div><label>HBP</label><input type="number" id="HBP"></div>
+    <div><label>SF</label><input type="number" id="SF"></div>
+  </div>
+
+  <label class="section-label">Linear weights for the season you're matching</label>
+  <div class="field-grid">
+    <div><label>wBB</label><input type="number" id="wBB" step="0.001"></div>
+    <div><label>wHBP</label><input type="number" id="wHBP" step="0.001"></div>
+    <div><label>w1B</label><input type="number" id="w1B" step="0.001"></div>
+    <div><label>w2B</label><input type="number" id="w2B" step="0.001"></div>
+    <div><label>w3B</label><input type="number" id="w3B" step="0.001"></div>
+    <div><label>wHR</label><input type="number" id="wHR" step="0.001"></div>
+  </div>
+  <div class="hint">From FanGraphs' "Guts!" page — a different set for every season.</div>
+
+  <button onclick="calc()">Calculate</button>
+
+  <div class="result-box" id="result">
+    <div class="headline" id="headline"></div>
+    <div class="breakdown" id="breakdown"></div>
+  </div>
+</div>
+
+<script>
+function val(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+function calc(){
+  const AB = val('AB'), H = val('H'), D2 = val('D2'), D3 = val('D3'), HR = val('HR'),
+        BB = val('BB'), IBB = val('IBB'), HBP = val('HBP'), SF = val('SF');
+  const wBB = val('wBB'), wHBP = val('wHBP'), w1B = val('w1B'), w2B = val('w2B'),
+        w3B = val('w3B'), wHR = val('wHR');
+
+  if(AB <= 0){ alert('Enter AB and the rest of the box score line.'); return; }
+
+  const S1 = H - D2 - D3 - HR;
+  const uBB = BB - IBB;
+  const num = wBB*uBB + wHBP*HBP + w1B*S1 + w2B*D2 + w3B*D3 + wHR*HR;
+  const den = AB + uBB + SF + HBP;
+  const wOBA = num/den;
+
+  document.getElementById('headline').textContent = 'wOBA: ' + wOBA.toFixed(3).replace(/^0/,'');
+  document.getElementById('breakdown').innerHTML =
+    `Singles (1B) = H − 2B − 3B − HR = ${S1}<br>` +
+    `Unintentional BB (uBB) = BB − IBB = ${uBB}<br>` +
+    `Numerator = ${wBB}×${uBB} + ${wHBP}×${HBP} + ${w1B}×${S1} + ${w2B}×${D2} + ${w3B}×${D3} + ${wHR}×${HR} = ${num.toFixed(3)}<br>` +
+    `Denominator = AB + uBB + SF + HBP = ${den}<br>` +
+    `wOBA = ${num.toFixed(3)} / ${den} = ${wOBA.toFixed(4)}`;
+  document.getElementById('result').classList.add('show');
+}
+</script>
+
+</body>
+</html>
